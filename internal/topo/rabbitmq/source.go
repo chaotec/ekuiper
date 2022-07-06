@@ -237,6 +237,7 @@ func (s *source) Connect(ctx api.StreamContext, consumer chan<- api.SourceTuple)
 
 func (s *source) Close(ctx api.StreamContext) error {
 	ctx.GetLogger().Infof("Close rabbitmq source")
+	s.conn.Close()
 	s.channel.Close()
 	return nil
 }

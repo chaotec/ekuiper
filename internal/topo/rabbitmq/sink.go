@@ -15,8 +15,7 @@ type sink struct {
 	URL          string
 	Exchange     string
 	ExchangeType string
-	QueueName    string
-	RoutingKey   RabbitMQRoutingKey
+	RoutingKey   string
 	conn         *amqp.Connection
 	channel      *amqp.Channel
 }
@@ -63,18 +62,10 @@ func (s *sink) Configure(props map[string]interface{}) error {
 	}
 
 	if i, ok := props["routingKey"]; ok {
-		if r, ok := i.(RabbitMQRoutingKey); ok {
+		if r, ok := i.(string); ok {
 			s.RoutingKey = r
 		} else {
 			return fmt.Errorf("Not valid routingKey %v.", i)
-		}
-	}
-
-	if i, ok := props["queueName"]; ok {
-		if q, ok := i.(string); ok {
-			s.QueueName = q
-		} else {
-			return fmt.Errorf("Not valid queueName %v.", i)
 		}
 	}
 
@@ -83,11 +74,14 @@ func (s *sink) Configure(props map[string]interface{}) error {
 }
 
 func (s *sink) Open(ctx api.StreamContext) error {
+	logger := ctx.GetLogger()
+	logger.Infof("Sink connet to rabbitmq.")
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s/", s.Username, s.Password, s.URL))
 	if err != nil {
 		return err
 	}
 	s.conn = conn
+	logger.Infof("Sink declare a channel.")
 	channel, err := conn.Channel()
 	if err != nil {
 		return err
