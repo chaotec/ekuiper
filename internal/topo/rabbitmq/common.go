@@ -21,31 +21,30 @@ const (
 	RabbitMQEventDelete RabbitMQEvent = "delete"
 )
 
+type BaseUnion struct {
+	Name string `json:"name,omitempty"`
+	Id   string `json:"id,omitempty"`
+}
+
 type RabbitMQBody struct {
 	MsgId     string             `json:"msgId,omitempty"`
 	MsgTopic  RabbitMQRoutingKey `json:"msgTopic,omitempty"`
 	MsgEvent  RabbitMQEvent      `json:"msgEvent,omitempty"`
 	Timestamp string             `json:"timestamp,omitempty"`
-	Body      interface{}        `json:"body,omitempty"`
+	Body      []byte             `json:"body,omitempty"`
 }
 
-type DeviceEvent struct {
-	DeviceName      string     `json:"deviceName,omitempty"`
-	DeviceModelName string     `json:"deviceModelName,omitempty"`
-	Properties      []Property `json:"properties,omitempty"`
-	Alarms          []Alarm    `json:"alarms,omitempty"`
-	Status          string     `json:"status,omitempty"`
+type DeviceData struct {
+	Device      BaseUnion   `json:"device,omitempty"`
+	DeviceModel BaseUnion   `json:"deviceModel,omitempty"`
+	Properties  []Property  `json:"properties,omitempty"`
+	Alarms      []BaseUnion `json:"alarms,omitempty"`
+	Status      string      `json:"status,omitempty"`
 }
 
 type Property struct {
-	Id          string `json:"id,omitempty"`
-	Name        string `json:"name,omitempty"`
+	BaseUnion
 	ValueType   string `json:"valueType,omitempty"`
 	ReportValue string `json:"reportValue,omitempty"`
 	DesireValue string `json:"desireValue,omitempty"`
-}
-
-type Alarm struct {
-	AlarmId   string `json:"alarmId,omitempty"`
-	AlarmName string `json:"alarmName,omitempty"`
 }

@@ -3,12 +3,10 @@ package rabbitmq
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"sync"
 
 	"github.com/lf-edge/ekuiper/internal/conf"
 	"github.com/lf-edge/ekuiper/pkg/api"
-	"github.com/mitchellh/mapstructure"
 	"github.com/streadway/amqp"
 )
 
@@ -166,70 +164,52 @@ func (s *source) Connect(ctx api.StreamContext, consumer chan<- api.SourceTuple)
 			return nil
 		case msg := <-s.msgs:
 			var (
-				body         RabbitMQBody
-				deviceEvents []DeviceEvent
+				body RabbitMQBody
+				ds   []DeviceData
 			)
 			logger.Infof("body = %s\n", msg.Body)
-			body.Body = []DeviceEvent{}
 			if err := json.Unmarshal(msg.Body, &body); err != nil {
+				logger.Infof("unmarshall body error, %s\n", err.Error())
 				continue
 			}
 			logger.Infof("after body = %s\n", body)
-			if err := mapstructure.Decode(body.Body, &deviceEvents); err != nil {
+			if err := json.Unmarshal(body.Body, &ds); err != nil {
+				logger.Infof("unmarshall device data error, %s\n", err.Error())
 				continue
 			}
-			logger.Infof("device data = %s\n", deviceEvents)
+			logger.Infof("device data = %s\n", ds)
 			switch RabbitMQRoutingKey(s.RoutingKey) {
 			case RabbitMQRoutingKeyDeviceData:
 				logger.Infoln("In RabbitMQRoutingKeyDeviceData")
-				for _, d := range deviceEvents {
+				for _, d := range ds {
 					result := make(map[string]interface{})
 					meta := make(map[string]interface{})
 					logger.Infof("d = %s", d)
-					for _, p := range d.Properties {
-						logger.Infof("p = %s", p)
-						switch p.ValueType {
-						case "int":
-							v, err := strconv.ParseInt(p.ReportValue, 10, 64)
-							if err != nil {
-								logger.Errorf("Failed to convert to int type.")
-								continue
-							}
-							result[p.Name] = v
-						case "float":
-							v, err := strconv.ParseFloat(p.ReportValue, 64)
-							if err != nil {
-								logger.Errorf("Failed to convert to float type.")
-								continue
-							}
-							result[p.Name] = v
-						case "string":
-							result[p.Name] = p.ReportValue
-						case "bool":
-							v, err := strconv.ParseBool(p.ReportValue)
-							if err != nil {
-								logger.Errorf("Failed to convert to bool type.")
-								continue
-							}
-							result[p.Name] = v
-						}
-					}
-					meta["deviceName"] = d.DeviceName
-					meta["deviceModelName"] = d.DeviceModelName
+					meta["deviceId"] = d.Device.Id
+					meta["deviceModelId"] = d.DeviceModel.Id
+					result[d.DeviceModel.Id+":"+d.Device.Id] = d
 					logger.Infof("result = %s", result)
 					logger.Infof("meta = %s", meta)
 					consumer <- api.NewDefaultSourceTuple(result, meta)
 				}
 			case RabbitMQRoutingKeyDeviceStatus:
-				for _, d := range deviceEvents {
+				for _, d := range ds {
 					result := make(map[string]interface{})
 					meta := make(map[string]interface{})
-					result["status"] = d.Status
-					meta["deviceName"] = d.DeviceName
-					meta["deviceModelName"] = d.DeviceModelName
+					result[d.DeviceModel.Id+":"+d.Device.Id] = d
+					meta["deviceId"] = d.Device.Id
+					meta["deviceModelId"] = d.DeviceModel.Id
 					consumer <- api.NewDefaultSourceTuple(result, meta)
 				}
 			case RabbitMQRoutingKeyDeviceCommandStatus:
+				for _, d := range ds {
+					result := make(map[string]interface{})
+					meta := make(map[string]interface{})
+					result[d.DeviceModel.Id+":"+d.Device.Id] = d
+					meta["deviceId"] = d.Device.Id
+					meta["deviceModelId"] = d.DeviceModel.Id
+					consumer <- api.NewDefaultSourceTuple(result, meta)
+				}
 			}
 		}
 	}

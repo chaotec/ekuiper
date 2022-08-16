@@ -6,7 +6,7 @@ ARCH := $(shell go env GOARCH)
 OS := $(shell go env GOOS)
 PACKAGE_NAME := kuiper-$(VERSION)-$(OS)-$(ARCH)
 
-TARGET ?= lfedge/ekuiper
+TARGET ?= registry-edge.lianyirong.com.cn/edge/ekuiper
 
 export KUIPER_SOURCE := $(shell pwd)
 
@@ -76,8 +76,8 @@ real_pkg:
 
 .PHONY: docker
 docker:
-	docker buildx build --no-cache --platform=linux/amd64 -t $(TARGET):$(VERSION) -f deploy/docker/Dockerfile . --load
-	docker buildx build --no-cache --platform=linux/amd64 -t $(TARGET):$(VERSION)-slim -f deploy/docker/Dockerfile-slim . --load
+	# docker buildx build --no-cache --platform=linux/amd64 -t $(TARGET):$(VERSION) -f deploy/docker/Dockerfile . --load
+	# docker buildx build --no-cache --platform=linux/amd64 -t $(TARGET):$(VERSION)-slim -f deploy/docker/Dockerfile-slim . --load
 	docker buildx build --no-cache --platform=linux/amd64 -t $(TARGET):$(VERSION)-alpine -f deploy/docker/Dockerfile-alpine . --load
 
 PLUGINS := sinks/file \
